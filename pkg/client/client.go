@@ -165,8 +165,13 @@ func (c *Client) initializeRSAKeys() ([]byte, error) {
 		Type:  "RSA PUBLIC KEY",
 		Bytes: pubkeyBytes,
 	})
-
+	//fmt.Printf("priv key")
+	//fmt.Println(priv.)
+	fmt.Println("")
+	fmt.Println("pub key")
+	fmt.Println(string(pubkeyPem))
 	encoded := base64.StdEncoding.EncodeToString(pubkeyPem)
+	fmt.Println(encoded)
 	register := server.RegisterRequest{
 		PublicKey:     encoded,
 		SecretKey:     c.secretKey,
@@ -272,6 +277,7 @@ func (c *Client) getInteractions(callback InteractionCallback) error {
 	builder.WriteString(c.correlationID)
 	builder.WriteString("&secret=")
 	builder.WriteString(c.secretKey)
+	fmt.Println(builder.String())
 	req, err := retryablehttp.NewRequest("GET", builder.String(), nil)
 	if err != nil {
 		return err

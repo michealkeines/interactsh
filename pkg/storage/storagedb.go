@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -66,6 +67,7 @@ func New(options *Options) (*StorageDB, error) {
 
 func (s *StorageDB) OnCacheRemovalCallback(key cache.Key, value cache.Value) {
 	if key, ok := value.([]byte); ok {
+		fmt.Println("deleting it? here")
 		_ = s.db.Delete(key, &opt.WriteOptions{})
 	}
 }
@@ -122,10 +124,15 @@ func (s *StorageDB) SetID(ID string) error {
 // AddInteraction adds an interaction data to the correlation ID after encrypting
 // it with Public Key for the provided correlation ID.
 func (s *StorageDB) AddInteraction(correlationID string, data []byte) error {
+	fmt.Println("inside AddInteration")
 	item, found := s.cache.GetIfPresent(correlationID)
+	fmt.Println("got item")
+
 	if !found {
 		return errors.New("could not get correlation-id from cache")
+
 	}
+	fmt.Println(item)
 	value, ok := item.(*CorrelationData)
 	if !ok {
 		return errors.New("invalid correlation-id cache value found")
@@ -142,6 +149,9 @@ func (s *StorageDB) AddInteraction(correlationID string, data []byte) error {
 		value.Unlock()
 	} else {
 		value.Lock()
+		fmt.Println("printing value.Data")
+		fmt.Println(value.Data)
+		fmt.Println("printing value.Data overr")
 		value.Data = append(value.Data, string(data))
 		value.Unlock()
 	}
@@ -171,6 +181,9 @@ func (s *StorageDB) AddInteractionWithId(id string, data []byte) error {
 		value.Unlock()
 	} else {
 		value.Lock()
+		fmt.Println("printing value.Data with ID")
+		fmt.Println(value.Data)
+		fmt.Println("printing value.Data overr with ID")
 		value.Data = append(value.Data, string(data))
 		value.Unlock()
 	}
@@ -273,7 +286,9 @@ func (s *StorageDB) getInteractions(correlationData *CorrelationData, id string)
 		if len(data) == 0 {
 			return nil, nil
 		}
-
+		fmt.Println("current data")
+		fmt.Println(data)
+		fmt.Println("over data")
 		for i, dataItem := range data {
 			encryptedDataItem, err := AESEncrypt(correlationData.AESKey, []byte(dataItem))
 			if err != nil {
@@ -284,6 +299,45 @@ func (s *StorageDB) getInteractions(correlationData *CorrelationData, id string)
 		}
 		return data, multierr.Combine(errs...)
 	}
+}
+
+func (s *StorageDB) GetInteractionsCheck(correlationID, secret string) ([]string, string, error) {
+	item, ok := s.cache.GetIfPresent(correlationID)
+	if !ok {
+		return nil, "", errors.New("could not get correlation-id from cache")
+	}
+	value, ok := item.(*CorrelationData)
+	if !ok {
+		return nil, "", errors.New("invalid correlation-id cache value found")
+	}
+	if !strings.EqualFold(value.SecretKey, secret) {
+		return nil, "", errors.New("invalid secret key passed for user")
+	}
+	value.Lock()
+	defer value.Unlock()
+
+	var errs []error
+	data := value.Data
+	//correlationData.Data = nil
+	if len(data) == 0 {
+		return nil, "", errors.New("Length is 0")
+	}
+	fmt.Println("current data")
+	fmt.Println(data)
+	fmt.Println("over data")
+	for i, dataItem := range data {
+		encryptedDataItem, err := AESEncrypt(value.AESKey, []byte(dataItem))
+		if err != nil {
+			errs = append(errs, errors.Wrap(err, "could not encrypt event data"))
+			continue
+		}
+		fmt.Println(i)
+		fmt.Println(dataItem)
+		fmt.Println(encryptedDataItem)
+		//data[i] = encryptedDataItem
+		data[i] = dataItem
+	}
+	return data, "", nil
 }
 
 func (s *StorageDB) Close() error {

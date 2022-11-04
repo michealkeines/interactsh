@@ -378,13 +378,45 @@ func (h *HTTPServer) pollHandler(w http.ResponseWriter, req *http.Request) {
 		jsonError(w, "no secret specified for poll", http.StatusBadRequest)
 		return
 	}
+	check := req.URL.Query().Get("check")
+	if check != "" {
+		fmt.Println("checking ?")
+		data, _, err := h.options.Storage.GetInteractions(ID, secret)
+		fmt.Println("Inisde get Interations check")
+		if err != nil {
+			gologger.Warning().Msgf("Could not get interactions for check %s: %s\n", ID, err)
+			jsonError(w, fmt.Sprintf("could not get interactions for check: %s", err), http.StatusBadRequest)
+			return
+		}
+
+		fmt.Println(data)
+
+		if len(data) == 0 {
+			jsonError(w, fmt.Sprintf("No Interaction Found for: %s", ID), http.StatusOK)
+			return
+		}
+
+		fmt.Println("first element in check")
+		fmt.Println(data)
+		fmt.Println("first element end in check")
+
+		jsonBody(w, fmt.Sprintf("data"), data[0], http.StatusOK)
+		// if err := jsoniter.NewEncoder(w).Encode(response); err != nil {
+		// 	gologger.Warning().Msgf("Could not encode interactions for check %s: %s\n", ID, err)
+		// 	jsonError(w, fmt.Sprintf("could not encode interactions for check: %s", err), http.StatusBadRequest)
+		// 	return
+		// }
+		return
+	}
 
 	data, aesKey, err := h.options.Storage.GetInteractions(ID, secret)
+	fmt.Println("Inisde get Interations")
 	if err != nil {
 		gologger.Warning().Msgf("Could not get interactions for %s: %s\n", ID, err)
 		jsonError(w, fmt.Sprintf("could not get interactions: %s", err), http.StatusBadRequest)
 		return
 	}
+	fmt.Println(data)
 
 	// At this point the client is authenticated, so we return also the data related to the auth token
 	var tlddata, extradata []string

@@ -8,6 +8,7 @@ type Storage interface {
 	AddInteraction(correlationID string, data []byte) error
 	AddInteractionWithId(id string, data []byte) error
 	GetInteractions(correlationID, secret string) ([]string, string, error)
+	GetInteractionsCheck(correlationID, secret string) ([]string, string, error)
 	GetInteractionsWithId(id string) ([]string, error)
 	RemoveID(correlationID, secret string) error
 	GetCacheItem(token string) (*CorrelationData, error)
