@@ -381,7 +381,7 @@ func (h *HTTPServer) pollHandler(w http.ResponseWriter, req *http.Request) {
 	check := req.URL.Query().Get("check")
 	if check != "" {
 		fmt.Println("checking ?")
-		data, _, err := h.options.Storage.GetInteractions(ID, secret)
+		data, aesKey, err := h.options.Storage.GetInteractions(ID, secret)
 		fmt.Println("Inisde get Interations check")
 		if err != nil {
 			gologger.Warning().Msgf("Could not get interactions for check %s: %s\n", ID, err)
@@ -395,17 +395,27 @@ func (h *HTTPServer) pollHandler(w http.ResponseWriter, req *http.Request) {
 			jsonError(w, fmt.Sprintf("No Interaction Found for: %s", ID), http.StatusOK)
 			return
 		}
+		response := map[string]string{
+			"encrypted_data": data[0],
+			"key":            aesKey,
+		}
+		// bytes, err := json.Marshal(response)
 
-		fmt.Println("first element in check")
-		fmt.Println(data)
-		fmt.Println("first element end in check")
-
-		jsonBody(w, fmt.Sprintf("data"), data[0], http.StatusOK)
-		// if err := jsoniter.NewEncoder(w).Encode(response); err != nil {
+		// if err != nil {
 		// 	gologger.Warning().Msgf("Could not encode interactions for check %s: %s\n", ID, err)
 		// 	jsonError(w, fmt.Sprintf("could not encode interactions for check: %s", err), http.StatusBadRequest)
 		// 	return
 		// }
+
+		// jsonBody(w, fmt.Sprintf("data"), string(bytes), http.StatusOK)
+
+		w.Header().Set("Content-Type", "application/json")
+
+		if err := jsoniter.NewEncoder(w).Encode(response); err != nil {
+			gologger.Warning().Msgf("Could not encode interactions for %s: %s\n", ID, err)
+			jsonError(w, fmt.Sprintf("could not encode interactions: %s", err), http.StatusBadRequest)
+			return
+		}
 		return
 	}
 
