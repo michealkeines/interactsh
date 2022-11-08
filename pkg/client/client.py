@@ -1,11 +1,18 @@
-from Cryptodome.PublicKey import RSA
-from Cryptodome.Cipher import PKCS1_OAEP
-from Cryptodome.Hash import SHA256
-from Cryptodome.Cipher import AES
+# from Cryptodome.PublicKey import RSA
+# from Cryptodome.Cipher import PKCS1_OAEP
+# from Cryptodome.Hash import SHA256
+# from Cryptodome.Cipher import AES
 import requests
 import base64
 import uuid
 import time
+import json
+
+from Cryptodome.Cipher.PKCS1_OAEP import PKCS1OAEP_Cipher
+from Cryptodome.PublicKey import RSA
+from Cryptodome.Cipher import PKCS1_OAEP
+from Cryptodome.Hash import SHA256
+from Cryptodome.Cipher import AES
 
 class Client:
     def __init__(
@@ -126,14 +133,50 @@ class Client:
         print("decode final out")
 
         try:
-            print(decoded.decode("utf-8"))
+            resp = decoded.decode("utf-8")
+            print(resp)
+            return resp 
         except Exception as e:
             print(e)
             print("decod failed")
-                 
+            return ""
+
+    def parse_response(self, response):
+        lines = response.split("\n")
+        dicts = []
+        for line in lines:
+            print(f'current: {line}')
+            try:
+                temp = json.loads(line)
+                if len(temp.keys()) > 0:
+                    dicts.append(temp)
+            except:
+                continue
+        return dicts
+                
+    def deregister(self):
+        data = {
+            "secret-key": f'{self.secret_key}',
+            "correlation-id": self.correlation_id
+        }
+        headers = {
+            "Authorization": self.token
+        }
+        try:
+            res = requests.post(
+                url=f"{self.server_url}/deregister",
+                json=data,
+                verify=False,
+                headers=headers
+            )
+            print(res.text)
+            print("deregistered")
+        except Exception as e:
+            print(e)
+            print("deregister request failed")
 
 
-temp_client = Client(token="152d88c7c6b428fc55fa8ccbb3eab085b8a7a6aca8c101a7d3258fc3badecb72")
+temp_client = Client(token="ff631695bfd6896f921859b3f11320780939a96640d3a4a8d76468cde5f66419")
 
 temp_client.set_rsa_keys()
 
@@ -149,9 +192,72 @@ try:
         if "error" in out:
             print("no data in poll")
             continue
-        temp_client.decrypt_response(
+        response = temp_client.decrypt_response(
             value=out["encrypted_data"],
             key=out["key"]
         )
+        dicts = temp_client.parse_response(
+            response=response
+        )
+        print(dicts)
+        # temp_client.deregister()
 except KeyboardInterrupt:
     print("stopped polling")
+    temp_client.deregister()
+    print("done")
+
+
+
+# for testin w3af client
+
+#
+# params_client = Client(token="dcd6572bd2c62bbb4b82d267a5db538252dba3237d53605df2e4afae04f7f057", server_url='https://blackeye.icu')
+#
+# try:
+#     while True:
+#         time.sleep(4)
+#         sub = f"{params_client.correlation_id}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+#         interactions = params_client.poll()
+#         print("here after inftaction")
+#         # if len(interactions) < 0:
+#         #     continue
+#
+#         for interaction in interactions:
+#             print(f"test {interaction}")
+#             if (
+#                     "protocol" in interaction
+#                     and "http" == interaction["protocol"]
+#             ):
+#                 print("foudn http")
+#                 if interaction["full-id"] == sub:
+#                     print("\nFOUDN\n")
+# except KeyboardInterrupt:
+#     print("stopping")
+
+
+# temp_client = Client(token="508f2e915232f054407099a39dab0115812ad9eb822555ed1cafbe28f03fd440")
+#
+# temp_client.set_rsa_keys()
+#
+# # print(temp_client.priv_key)
+# # print("\n\n")
+# # print(temp_client.pub_key)
+# temp_client.register()
+#
+# try:
+#     while True:
+#         time.sleep(4)
+#         out = temp_client.check()
+#         if "error" in out:
+#             print("no data in poll")
+#             continue
+#         response = temp_client.decrypt_response(
+#             value=out["encrypted_data"],
+#             key=out["key"]
+#         )
+#         dicts = temp_client.parse_response(
+#             response=response
+#         )
+#         print(dicts)
+# except KeyboardInterrupt:
+#     print("stopped polling")

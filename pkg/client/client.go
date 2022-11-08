@@ -358,10 +358,13 @@ func (c *Client) Close() error {
 		CorrelationID: c.correlationID,
 		SecretKey:     c.secretKey,
 	}
+	fmt.Println(register)
 	data, err := jsoniter.Marshal(register)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal deregister request")
 	}
+	fmt.Println("data")
+	fmt.Println(string(data))
 	URL := c.serverURL.String() + "/deregister"
 	req, err := retryablehttp.NewRequest("POST", URL, bytes.NewReader(data))
 	if err != nil {
