@@ -210,16 +210,22 @@ func (s *StorageDB) GetInteractions(correlationID, secret string) ([]string, str
 }
 
 // GetInteractions returns the interactions for a id and empty the cache
-func (s *StorageDB) GetInteractionsWithId(id string) ([]string, error) {
+func (s *StorageDB) GetInteractionsWithId(id string) ([]string, string, error) {
 	item, ok := s.cache.GetIfPresent(id)
+	println("for id:")
+	println(id)
+	println(item)
 	if !ok {
-		return nil, errors.New("could not get id from cache")
+		return nil, "", errors.New("could not get id from cache")
 	}
 	value, ok := item.(*CorrelationData)
+	println(value)
 	if !ok {
-		return nil, errors.New("invalid id cache value found")
+		return nil, "", errors.New("invalid id cache value found")
 	}
-	return s.getInteractions(value, id)
+	println("end for id")
+	data, e := s.getInteractions(value, id)
+	return data, string(value.AESKey), e
 }
 
 // RemoveID removes data for a correlation ID and data related to it.

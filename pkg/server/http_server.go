@@ -379,7 +379,7 @@ func (h *HTTPServer) pollHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	check := req.URL.Query().Get("check")
-	if check != "" {
+	if check == "test" {
 		fmt.Println("checking ?")
 		data, aesKey, err := h.options.Storage.GetInteractions(ID, secret)
 		fmt.Println("Inisde get Interations check")
@@ -416,6 +416,48 @@ func (h *HTTPServer) pollHandler(w http.ResponseWriter, req *http.Request) {
 			jsonError(w, fmt.Sprintf("could not encode interactions: %s", err), http.StatusBadRequest)
 			return
 		}
+
+		return
+	}
+	pay := req.URL.Query().Get("pay")
+	if check == "smtp" && pay != "" {
+		fmt.Println("checking ? smtp")
+		keys := make([]string, 0)
+
+		tlddata, aesKey, _ := h.options.Storage.GetInteractionsWithId(pay)
+		fmt.Println(tlddata)
+		println("key is gonna be set")
+		keys = append(keys, aesKey)
+		println("key is set")
+		if len(tlddata) == 0 {
+			jsonError(w, fmt.Sprintf("No smtp Interaction Found for: %s", ID), http.StatusOK)
+			return
+		}
+		println("prepare response")
+		response := map[string][]string{
+			"encrypted_data": tlddata,
+			"key":            keys,
+		}
+		fmt.Println(response)
+		println("response prepared")
+		// bytes, err := json.Marshal(response)
+
+		// if err != nil {
+		// 	gologger.Warning().Msgf("Could not encode interactions for check %s: %s\n", ID, err)
+		// 	jsonError(w, fmt.Sprintf("could not encode interactions for check: %s", err), http.StatusBadRequest)
+		// 	return
+		// }
+
+		// jsonBody(w, fmt.Sprintf("data"), string(bytes), http.StatusOK)
+		println("trying to sen smtp response")
+		w.Header().Set("Content-Type", "application/json")
+
+		if err := jsoniter.NewEncoder(w).Encode(response); err != nil {
+			gologger.Warning().Msgf("Could not encode interactions for %s: %s\n", ID, err)
+			jsonError(w, fmt.Sprintf("could not encode interactions: %s", err), http.StatusBadRequest)
+			return
+		}
+		println("end of smtp response?")
 		return
 	}
 
@@ -432,9 +474,9 @@ func (h *HTTPServer) pollHandler(w http.ResponseWriter, req *http.Request) {
 	var tlddata, extradata []string
 	if h.options.RootTLD {
 		for _, domain := range h.options.Domains {
-			tlddata, _ = h.options.Storage.GetInteractionsWithId(domain)
+			tlddata, _, _ = h.options.Storage.GetInteractionsWithId(domain)
 		}
-		extradata, _ = h.options.Storage.GetInteractionsWithId(h.options.Token)
+		extradata, _, _ = h.options.Storage.GetInteractionsWithId(h.options.Token)
 	}
 	response := &PollResponse{Data: data, AESKey: aesKey, TLDData: tlddata, Extra: extradata}
 

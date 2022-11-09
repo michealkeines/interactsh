@@ -104,15 +104,39 @@ class Client:
             print("request failed")
             return {"error": "request failed"}
 
-    def decrypt_response(self, value, key):
-        decoded_key = base64.b64decode(key)
-        priv_key = RSA.import_key(self.priv_key)
-        ciper = PKCS1_OAEP.new(
-            key=priv_key,
-            hashAlgo=SHA256,
-        )
+    def poll(self, pay) -> dict:
+        url = f'{self.server_url}/poll?id={self.correlation_id}&secret={self.secret_key}&check=smtp&pay={pay}'
+        print(url)
+        headers = {
+            "Authorization": self.token
+        }
+
+        try:
+            res = requests.get(
+                url=url,
+                headers=headers,
+                verify=False
+            )
+            print(res.text)
+            print("polled")
+            return res.json()
+        except Exception as e:
+            print(e)
+            print("request failed")
+            return {"error": "request poll failed"}
+
+    def decrypt_response(self, value, key, plain):
+        if not plain:
+            decoded_key = base64.b64decode(key)
+            priv_key = RSA.import_key(self.priv_key)
+            ciper = PKCS1_OAEP.new(
+                key=priv_key,
+                hashAlgo=SHA256,
+            )
         
-        plain_key = ciper.decrypt(decoded_key)
+            plain_key = ciper.decrypt(decoded_key)
+        else:
+            plain_key: bytes = key.encode('utf-8')
         print("plain plain_key")
         print(plain_key)
         # https://stackoverflow.com/questions/35811119/aes-encryption-golang-and-python
@@ -140,7 +164,16 @@ class Client:
             print(e)
             print("decod failed")
             return ""
-
+    def parse_dicts(self, response):
+        out = []
+        for line in response:
+            try:
+                val = json.loads(line)
+                out.append(val)
+            except:
+                print(f"coudl parse {line}")
+        return out
+            
     def parse_response(self, response):
         lines = response.split("\n")
         dicts = []
@@ -176,7 +209,7 @@ class Client:
             print("deregister request failed")
 
 
-temp_client = Client(token="f8726ac61c7c9aba09b5e37a6d756857ad843db04d9bad5d10c586880ea77b3c")
+temp_client = Client(token="3e7de126273fdcd06bf1655f7d76f58f7d2b06f3b9f38686582fa421c90a66c7")
 
 temp_client.set_rsa_keys()
 
@@ -188,19 +221,35 @@ temp_client.register()
 try:
     while True:
         time.sleep(4)
-        out = temp_client.check()
+        a = "a" * temp_client.correlation_id_nonce_len
+        pay = f'{temp_client.correlation_id}{a}.blackeye.icu'
+        print(pay)
+        pay = f'{temp_client.correlation_id}'
+        print(pay)
+        out = temp_client.poll(pay)
         if "error" in out:
             print("no data in poll")
             continue
-        response = temp_client.decrypt_response(
-            value=out["encrypted_data"],
-            key=out["key"]
-        )
-        dicts = temp_client.parse_response(
-            response=response
-        )
-        print(dicts)
-        # temp_client.deregister()
+        print(out)
+        for ciper in out["encrypted_data"]:
+            print(ciper)
+            response = temp_client.decrypt_response(
+                value=ciper,
+                key=out["key"][0],
+                plain=True
+            )
+        # response = temp_client.poll()
+        # if "tlddata" not in response:
+        #     print("no response fror tlddata")
+        #     continue
+        # dicts = temp_client.parse_dicts(
+        #     response=response["tlddata"]
+        # )
+            dicts = temp_client.parse_response(
+                response=response
+            )
+            print(dicts)
+        #temp_client.deregister()
 except KeyboardInterrupt:
     print("stopped polling")
     temp_client.deregister()
