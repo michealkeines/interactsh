@@ -176,7 +176,7 @@ class Client:
             print("deregister request failed")
 
 
-temp_client = Client(token="ff631695bfd6896f921859b3f11320780939a96640d3a4a8d76468cde5f66419")
+temp_client = Client(token="f8726ac61c7c9aba09b5e37a6d756857ad843db04d9bad5d10c586880ea77b3c")
 
 temp_client.set_rsa_keys()
 
