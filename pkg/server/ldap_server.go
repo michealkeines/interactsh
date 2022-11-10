@@ -93,7 +93,7 @@ func (ldapServer *LDAPServer) handleBind(w ldap.ResponseWriter, m *ldap.Message)
 // handleSearch is a handler for search requests
 func (ldapServer *LDAPServer) handleSearch(w ldap.ResponseWriter, m *ldap.Message) {
 	atomic.AddUint64(&ldapServer.options.Stats.Ldap, 1)
-
+	fmt.Println("ldap interaction handleserarcg")
 	var uniqueID, fullID string
 
 	host := m.Client.Addr().String()
@@ -120,11 +120,18 @@ func (ldapServer *LDAPServer) handleSearch(w ldap.ResponseWriter, m *ldap.Messag
 	w.Write(e)
 	res := ldap.NewSearchResultDoneResponse(ldap.LDAPResultSuccess)
 	w.Write(res)
-
+	fmt.Println("base object")
+	fmt.Println(string(baseObject))
 	for _, part := range stringsutil.SplitAny(string(baseObject), "=,") {
+		fmt.Println("parts")
+		fmt.Println(part)
 		partChunks := strings.Split(part, ".")
+		fmt.Println("parts chunks")
+		fmt.Println(partChunks)
 		for i, partChunk := range partChunks {
 			for scanChunk := range stringsutil.SlideWithLength(partChunk, ldapServer.options.GetIdLength()) {
+				fmt.Println("scanchunk")
+				fmt.Println(scanChunk)
 				if ldapServer.options.isCorrelationID(scanChunk) {
 					uniqueID = scanChunk
 					fullID = partChunk
@@ -139,8 +146,12 @@ func (ldapServer *LDAPServer) handleSearch(w ldap.ResponseWriter, m *ldap.Messag
 }
 
 func (ldapServer *LDAPServer) handleInteraction(uniqueID, fullID, reqString, host string) {
+	fmt.Println("ldap interaction handle")
+	fmt.Println(host)
+	fmt.Println(uniqueID)
 	if uniqueID != "" {
 		correlationID := uniqueID[:ldapServer.options.CorrelationIdLength]
+		fmt.Println(correlationID)
 		interaction := &Interaction{
 			Protocol:      "ldap",
 			UniqueID:      uniqueID,
