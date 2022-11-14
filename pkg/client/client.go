@@ -165,13 +165,8 @@ func (c *Client) initializeRSAKeys() ([]byte, error) {
 		Type:  "RSA PUBLIC KEY",
 		Bytes: pubkeyBytes,
 	})
-	//fmt.Printf("priv key")
-	//fmt.Println(priv.)
-	fmt.Println("")
-	fmt.Println("pub key")
-	fmt.Println(string(pubkeyPem))
 	encoded := base64.StdEncoding.EncodeToString(pubkeyPem)
-	fmt.Println(encoded)
+
 	register := server.RegisterRequest{
 		PublicKey:     encoded,
 		SecretKey:     c.secretKey,
@@ -277,7 +272,7 @@ func (c *Client) getInteractions(callback InteractionCallback) error {
 	builder.WriteString(c.correlationID)
 	builder.WriteString("&secret=")
 	builder.WriteString(c.secretKey)
-	fmt.Println(builder.String())
+
 	req, err := retryablehttp.NewRequest("GET", builder.String(), nil)
 	if err != nil {
 		return err
@@ -358,13 +353,12 @@ func (c *Client) Close() error {
 		CorrelationID: c.correlationID,
 		SecretKey:     c.secretKey,
 	}
-	fmt.Println(register)
+
 	data, err := jsoniter.Marshal(register)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal deregister request")
 	}
-	fmt.Println("data")
-	fmt.Println(string(data))
+
 	URL := c.serverURL.String() + "/deregister"
 	req, err := retryablehttp.NewRequest("POST", URL, bytes.NewReader(data))
 	if err != nil {

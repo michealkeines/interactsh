@@ -380,16 +380,12 @@ func (h *HTTPServer) pollHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	check := req.URL.Query().Get("check")
 	if check == "test" {
-		fmt.Println("checking ?")
 		data, aesKey, err := h.options.Storage.GetInteractions(ID, secret)
-		fmt.Println("Inisde get Interations check")
 		if err != nil {
 			gologger.Warning().Msgf("Could not get interactions for check %s: %s\n", ID, err)
 			jsonError(w, fmt.Sprintf("could not get interactions for check: %s", err), http.StatusBadRequest)
 			return
 		}
-
-		fmt.Println(data)
 
 		if len(data) == 0 {
 			jsonError(w, fmt.Sprintf("No Interaction Found for: %s", ID), http.StatusOK)
@@ -421,25 +417,21 @@ func (h *HTTPServer) pollHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	pay := req.URL.Query().Get("pay")
 	if check == "smtp" && pay != "" {
-		fmt.Println("checking ? smtp")
 		keys := make([]string, 0)
 
 		tlddata, aesKey, _ := h.options.Storage.GetInteractionsWithId(pay)
-		fmt.Println(tlddata)
-		println("key is gonna be set")
 		keys = append(keys, aesKey)
-		println("key is set")
+
 		if len(tlddata) == 0 {
 			jsonError(w, fmt.Sprintf("No smtp Interaction Found for: %s", ID), http.StatusOK)
 			return
 		}
-		println("prepare response")
+
 		response := map[string][]string{
 			"encrypted_data": tlddata,
 			"key":            keys,
 		}
-		fmt.Println(response)
-		println("response prepared")
+
 		// bytes, err := json.Marshal(response)
 
 		// if err != nil {
@@ -449,7 +441,7 @@ func (h *HTTPServer) pollHandler(w http.ResponseWriter, req *http.Request) {
 		// }
 
 		// jsonBody(w, fmt.Sprintf("data"), string(bytes), http.StatusOK)
-		println("trying to sen smtp response")
+
 		w.Header().Set("Content-Type", "application/json")
 
 		if err := jsoniter.NewEncoder(w).Encode(response); err != nil {
@@ -457,18 +449,17 @@ func (h *HTTPServer) pollHandler(w http.ResponseWriter, req *http.Request) {
 			jsonError(w, fmt.Sprintf("could not encode interactions: %s", err), http.StatusBadRequest)
 			return
 		}
-		println("end of smtp response?")
+
 		return
 	}
 
 	data, aesKey, err := h.options.Storage.GetInteractions(ID, secret)
-	fmt.Println("Inisde get Interations")
+
 	if err != nil {
 		gologger.Warning().Msgf("Could not get interactions for %s: %s\n", ID, err)
 		jsonError(w, fmt.Sprintf("could not get interactions: %s", err), http.StatusBadRequest)
 		return
 	}
-	fmt.Println(data)
 
 	// At this point the client is authenticated, so we return also the data related to the auth token
 	var tlddata, extradata []string
